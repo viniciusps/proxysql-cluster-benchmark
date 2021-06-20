@@ -1,18 +1,20 @@
 #!/bin/bash
 
 KUBE_VERSION=1.18.16
-PROXSQL_VERSION=2.1.1
+PROXYSQL_VERSION=2.1.1
 ROOT_DIR=$(pwd)
 
 ###### create kube cluster on minikube
 
-minikube start --kubernetes-version=v${KUBE_VERSION}
-minikube enable ingress
+minikube start --vm-driver=hyperkit -p kube-proxysql --kubernetes-version=v${KUBE_VERSION}
+minikube -p kube-proxysql addons enable ingress
 
-MINIKUBE_IP=$(minikube ip)
+MINIKUBE_IP=$(minikube ip -p kube-proxysql)
 DNS_NAME=$MINIKUBE_IP.nip.io
 
 ####### install mysql
+
+helm repo add bitnami https://charts.bitnami.com/bitnami
 
 helm install mysql -f mysql/values.yaml bitnami/mysql
 
@@ -24,13 +26,13 @@ helm install mysql-secondary -f mysql/mysql_exporter_secondary_values.yaml prome
 
 ############ install proxysql + connect to mysql
 
-sed -i s/VERSION/$PROXYSQL_VERSION/ proxysql-cluster/Dockerfile
+sed -i -e s/VERSION/$PROXYSQL_VERSION/ proxysql-cluster/Dockerfile
 
-eval $(minikube docker-env)
+eval $(minikube -p kube-proxysql docker-env)
 
 docker build -t local/proxysql:$PROXYSQL_VERSION proxysql-cluster/
 
-sed -i s/VERSION/$PROXYSQL_VERSION/ proxysql-cluster/proxysql-statefulset.yaml
+sed -i -e s/VERSION/$PROXYSQL_VERSION/ proxysql-cluster/proxysql-statefulset.yaml
 
 kubectl create configmap proxysqlcm --from-file=proxysql-cluster/proxysql.cnf
 
@@ -42,7 +44,7 @@ kubectl apply -f proxysql-cluster/proxysql-headless.yaml
 
 ################ install WP
 
-sed -i s/DNS_NAME/$DNS_NAME/ wordpress/values.yaml
+sed -i -e s/DNS_NAME/$DNS_NAME/ wordpress/values.yaml
 
 helm install wordpress -f wordpress/values.yaml bitnami/wordpress
 
@@ -50,9 +52,9 @@ helm install wordpress -f wordpress/values.yaml bitnami/wordpress
 
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 
-helm install prometheus -f prometheus/values.yaml prometheus-community/prometheus
+helm install prometheus -f prometheus/prometheus-values.yaml prometheus-community/prometheus
 
-sed -i s/DNS_NAME/$DNS_NAME/ prometheus/prometheus-ingress.yaml
+sed -i -e s/DNS_NAME/$DNS_NAME/ prometheus/prometheus-ingress.yaml
 
 kubectl apply -f prometheus/prometheus-ingress.yaml
 
@@ -62,6 +64,10 @@ helm repo add grafana https://grafana.github.io/helm-charts
 
 helm install grafana -f grafana/values.yaml grafana/grafana
 
-sed -i s/DNS_NAME/$DNS_NAME/ grafana/grafana-ingress.yaml
+sed -i -e s/DNS_NAME/$DNS_NAME/ grafana/grafana-ingress.yaml
 
-kubectl apply -f grafana/granafa-ingress.yaml
+kubectl apply -f grafana/grafana-ingress.yaml
+
+echo "MYSQL PASSWORD: $(kubectl get secret --namespace default mysql -o jsonpath="{.data.mysql-root-password}" | base64 --decode)"
+
+echo "Grafana PASSWORD: $(kubectl get secret grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo)"

@@ -38,7 +38,7 @@ collectors:
 # mysql connection params which build the DATA_SOURCE_NAME env var of the docker container
 mysql:
   db: ""
-  host: "notmidship-mysql-secondary"
+  host: "mysql-mysql-secondary"
   param: ""
   pass: "exporter"
   port: 3306
