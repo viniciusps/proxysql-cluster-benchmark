@@ -1,0 +1,106 @@
+datadir="/var/lib/proxysql"
+
+admin_variables=
+{
+  admin_credentials="proxysql:proxysql;radmin:radmin;cluster1:cluster1pass"
+  mysql_ifaces="0.0.0.0:6032"
+  web_enabled="true"
+  restapi_enabled="true"
+  restapi_port="9170"
+  prometheus_memory_metrics_interval=60
+  stats_credentials="proxysql:proxysql"
+  cluster_username="cluster1"
+  cluster_password="cluster1pass"
+  cluster_check_interval_ms=200
+  cluster_check_status_frequency=100
+  cluster_mysql_query_rules_save_to_disk=true
+  cluster_mysql_servers_save_to_disk=true
+  cluster_mysql_users_save_to_disk=true
+  cluster_proxysql_servers_save_to_disk=true
+  cluster_mysql_query_rules_diffs_before_sync=3
+  cluster_mysql_servers_diffs_before_sync=3
+  cluster_mysql_users_diffs_before_sync=3
+  cluster_proxysql_servers_diffs_before_sync=3
+}
+
+mysql_variables=
+{
+  threads=3
+  max_connections=5000
+  default_query_delay=0
+  default_query_timeout=36000000
+  have_compress=true
+  poll_timeout=2000
+  interfaces="0.0.0.0:6033;/tmp/proxysql.sock"
+  default_schema="information_schema"
+  stacksize=1048576
+  server_version="8.5.7"
+  connect_timeout_server=3000
+  monitor_username="monitor"
+  monitor_password="monitor"
+  monitor_history=600000
+  monitor_connect_interval=5000
+  monitor_ping_interval=2000
+  monitor_read_only_interval=1500
+  monitor_read_only_timeout=500
+  ping_interval_server_msec=15000
+  ping_timeout_server=500
+  commands_stats=true
+  sessions_sort=true
+  connect_retries_on_failure=10
+}
+
+# defines all the MySQL servers
+mysql_servers =
+(
+	{ address="mysql-mysql-primary.default.svc.cluster.local" , port=3306 , hostgroup=0, max_connections=5000 },
+        { address="mysql-mysql-secondary.default.svc.cluster.local" , port=3306 , hostgroup=1, max_connections=5000 },
+)
+
+
+# defines all the MySQL users
+mysql_users:
+(
+	{ username = "wordpress" , password = "wordpress" , default_hostgroup = 0 , active = 1 }
+)
+
+
+
+#defines MySQL Query Rules
+mysql_query_rules:
+(
+	{
+		rule_id=1
+		active=1
+		match_pattern="^SELECT .* FOR UPDATE$"
+		destination_hostgroup=0
+		apply=1
+	},
+	{
+		rule_id=2
+		active=1
+		match_pattern="^SELECT"
+		destination_hostgroup=1
+		apply=1
+	}
+)
+
+scheduler=
+(
+)
+
+
+mysql_replication_hostgroups=
+(
+        {
+                writer_hostgroup=0
+                reader_hostgroup=1
+                comment="RHG1"
+       }
+)
+
+proxysql_servers =
+(
+    { hostname = "proxysql-0.proxysqlcluster", port = 6032, weight = 1 },
+    { hostname = "proxysql-1.proxysqlcluster", port = 6032, weight = 1 }
+)

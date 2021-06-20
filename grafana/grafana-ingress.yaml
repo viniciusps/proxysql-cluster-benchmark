@@ -1,0 +1,17 @@
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: grafana-ingress
+  annotations:
+          #kubernetes.io/ingress.class: "nginx-test"
+  namespace: default
+spec:
+  rules:
+    - host: 'grafana.DNS_NAME'
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: grafana
+              servicePort: 80

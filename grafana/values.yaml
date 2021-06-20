@@ -1,0 +1,5 @@
+datasources:
+  - name: Prometheus
+    type: Prometheus
+    access: direct
+    url: http://prometheus-server:80

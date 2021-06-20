@@ -1,0 +1,22 @@
+# adds additional scrape configs to prometheus.yml
+# must be a string so you have to add a | after extraScrapeConfigs:
+# example adds prometheus-blackbox-exporter scrape config
+extraScrapeConfigs: |
+   - job_name: 'mysql-primary'
+     static_configs:
+       - targets:
+               - mysql-primary-prometheus-mysql-exporter:9104
+   - job_name: 'mysql-secondary'
+     static_configs:
+       - targets:
+               - mysql-secondary-prometheus-mysql-exporter:9104
+   - job_name: 'wordpress_metrics'
+     metrics_path: /metrics
+     static_configs:
+       - targets:
+         - wordpress-metrics:9117
+   - job_name: "proxysql"
+     scrape_interval: 5s
+     static_configs:
+             - targets: ["proxysql:9170"]
+

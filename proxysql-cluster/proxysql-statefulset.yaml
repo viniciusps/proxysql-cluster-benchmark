@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: proxysql
+  labels:
+    app: proxysql
+spec:
+  replicas: 3
+  serviceName: proxysqlcluster
+  selector:
+    matchLabels:
+      app: proxysql
+      tier: frontend
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: proxysql
+        tier: frontend
+    spec:
+      restartPolicy: Always
+      containers:
+      - image: local/proxysql:VERSION
+        imagePullPolicy: IfNotPresent
+        name: proxysql
+        volumeMounts:
+        - name: proxysql-config
+          mountPath: /etc/proxysql.cnf
+          subPath: proxysql.cnf
+        ports:
+        - containerPort: 6033
+          name: proxysql-mysql
+        - containerPort: 6032
+          name: proxysql-admin
+        - containerPort: 6080
+          name: proxysql-web
+        - containerPort: 9170
+          name: proxysql-metrics
+      volumes:
+      - name: proxysql-config
+        configMap:
+          name: proxysqlcm
